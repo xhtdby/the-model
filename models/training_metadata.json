@@ -1,0 +1,34 @@
+{
+  "timestamp": "2025-12-04T18:53:06.930849",
+  "config": {
+    "data_path": "C:\\Users\\vishu\\sheepy assignment\\ai in health\\the model\\healthcare-dataset-stroke-data.csv",
+    "output_dir": "C:\\Users\\vishu\\sheepy assignment\\ai in health\\the model\\models",
+    "n_iter": 10,
+    "cv": 3,
+    "random_state": 42
+  },
+  "data_info": {
+    "n_samples": 5110,
+    "n_features": 11,
+    "stroke_rate": 0.0487279843444227
+  },
+  "best_params": {
+    "model__colsample_bytree": 0.8430179407605753,
+    "model__gamma": 0.08526206184364576,
+    "model__learning_rate": 0.011615865989246453,
+    "model__max_depth": 6.0,
+    "model__min_child_weight": 9.0,
+    "model__n_estimators": 415.0,
+    "model__reg_alpha": 5.632882178455393,
+    "model__reg_lambda": 3.854165025399161,
+    "model__subsample": 0.6063865008880857
+  },
+  "metrics": {
+    "roc_auc": 0.8382304526748972,
+    "average_precision": 0.2965655180804299,
+    "sensitivity": 0.82,
+    "specificity": 0.7582304526748971,
+    "ppv": 0.14855072463768115,
+    "npv": 0.9879356568364611
+  }
+}
