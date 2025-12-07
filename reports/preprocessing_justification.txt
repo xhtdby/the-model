@@ -1,0 +1,78 @@
+======================================================================
+PREPROCESSING JUSTIFICATION REPORT
+======================================================================
+
+1. MISSING VALUES HANDLING
+----------------------------------------------------------------------
+Features with missing values: 1
+
+Strategy: KNN Imputation (k=5)
+Justification:
+  • Preserves multivariate relationships between features
+  • Superior to mean/median imputation for MAR data
+  • Uses k=5 nearest neighbors based on Euclidean distance
+  • Applied AFTER RobustScaler to ensure fair distance calculation
+
+2. CATEGORICAL FEATURE ENCODING
+----------------------------------------------------------------------
+Strategy: One-Hot Encoding with drop='first'
+Justification:
+  • Converts nominal categories into binary indicators
+  • drop='first' prevents perfect multicollinearity (dummy variable trap)
+  • Scikit-learn's OneHotEncoder handles unseen categories gracefully
+
+Categorical features to encode: ['gender', 'ever_married', 'work_type', 'Residence_type', 'smoking_status']
+
+3. NUMERICAL FEATURE SCALING
+----------------------------------------------------------------------
+Strategy: RobustScaler (median and IQR)
+Justification:
+  • 3/3 continuous features are non-normal
+  • RobustScaler uses median/IQR instead of mean/std
+  • More robust to outliers than StandardScaler
+  • Critical for distance-based algorithms (KNN imputation)
+
+Applied BEFORE KNN Imputation to ensure:
+  • Fair distance calculations across features with different scales
+  • e.g., glucose (~200) vs age (~50) have equal weight
+
+4. LOG TRANSFORMATION
+----------------------------------------------------------------------
+NOT APPLIED in this project
+Justification:
+  • Tree-based models (XGBoost) are invariant to monotonic transformations
+  • RobustScaler already handles skewness via median/IQR
+  • Log transform would be needed for linear models or when:
+    - Feature has extreme right skew (skewness > 2)
+    - Feature spans multiple orders of magnitude
+
+5. FEATURE REMOVAL
+----------------------------------------------------------------------
+Removed: 'id' column
+Justification:
+  • Correlation with target: 0.0064 (negligible)
+  • Sequential identifier with no predictive value
+  • Would cause overfitting if included
+
+6. MULTICOLLINEARITY CHECK
+----------------------------------------------------------------------
+✓ No multicollinearity detected (all pairwise |r| < 0.8)
+
+7. FINAL PIPELINE STRUCTURE
+----------------------------------------------------------------------
+sklearn.Pipeline with ColumnTransformer:
+
+  Numerical Features:
+    1. RobustScaler() → scales to median=0, IQR=1
+    2. KNNImputer(n_neighbors=5) → fills missing BMI
+
+  Categorical Features:
+    1. OneHotEncoder(drop='first', handle_unknown='ignore')
+
+Benefits:
+  • Prevents data leakage (fit only on training data)
+  • Ensures reproducibility
+  • Compatible with scikit-learn cross-validation
+  • Serializable for production deployment
+
+======================================================================

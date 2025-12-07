@@ -400,7 +400,7 @@ class TestTransformationCorrectness:
         
         # Find smoking_status categories
         smoking_idx = CATEGORICAL_FEATURES.index('smoking_status')
-        smoking_categories = encoder.categories_[smoking_idx]
+        smoking_categories = encoder.categories_[smoking_idx] 
         
         # 'Unknown' should be in the categories
         assert 'Unknown' in smoking_categories, (

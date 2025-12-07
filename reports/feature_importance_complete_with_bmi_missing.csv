@@ -1,0 +1,17 @@
+Rank,Feature,Importance,Status,Category
+1,numerical__age,0.3372,Current Model,Numerical
+2,categorical__ever_married_Yes,0.0948,Current Model,Categorical
+3,numerical__avg_glucose_level,0.0783,Current Model,Numerical
+4,numerical__bmi_missing,0.0767,SIMULATED,Numerical (Binary)
+5,categorical__hypertension_1,0.0751,Current Model,Categorical
+6,numerical__bmi,0.0539,Current Model,Numerical
+7,categorical__gender_Male,0.0472,Current Model,Categorical
+8,categorical__work_type_children,0.0453,Current Model,Categorical
+9,categorical__heart_disease_1,0.0446,Current Model,Categorical
+10,categorical__smoking_status_never smoked,0.0409,Current Model,Categorical
+11,categorical__smoking_status_smokes,0.0407,Current Model,Categorical
+12,categorical__work_type_Self-employed,0.0403,Current Model,Categorical
+13,categorical__smoking_status_formerly smoked,0.038,Current Model,Categorical
+14,categorical__Residence_type_Urban,0.0362,Current Model,Categorical
+15,categorical__work_type_Private,0.0277,Current Model,Categorical
+16,categorical__work_type_Never_worked,0.0,Current Model,Categorical

@@ -1,0 +1,11 @@
+Feature,Type,Unique_Values,Encoding_Method
+gender,Categorical,3,One-Hot Encoding (drop='first')
+age,Continuous,104,None (RobustScaler for normalization)
+hypertension,Binary,2,None (already 0/1)
+heart_disease,Binary,2,None (already 0/1)
+ever_married,Categorical,2,One-Hot Encoding (drop='first')
+work_type,Categorical,5,One-Hot Encoding (drop='first')
+Residence_type,Categorical,2,One-Hot Encoding (drop='first')
+avg_glucose_level,Continuous,3979,None (RobustScaler for normalization)
+bmi,Continuous,418,None (RobustScaler for normalization)
+smoking_status,Categorical,4,One-Hot Encoding (drop='first')

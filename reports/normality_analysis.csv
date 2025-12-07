@@ -1,0 +1,4 @@
+Feature,Mean,Median,Std,Skewness,Kurtosis,Normality_Test,P_Value,Is_Normal,Recommendation
+age,43.226614481409,45.0,22.61264672311349,-0.1370593225984694,-0.9910102432016696,D'Agostino,4.7895697274981233e-244,False,"RobustScaler (not normal, use median/IQR)"
+avg_glucose_level,106.1476771037182,91.88499999999999,45.28356015058198,1.5722838665030459,1.6804785404038278,D'Agostino,2.662310941715711e-289,False,RobustScaler or Log Transform (highly skewed)
+bmi,28.893236911794663,28.1,7.854066729680164,1.0553402052962928,3.362659165623678,Shapiro-Wilk,6.615876600227606e-37,False,RobustScaler or Log Transform (highly skewed)

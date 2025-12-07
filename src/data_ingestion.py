@@ -27,7 +27,9 @@ from pandera.errors import SchemaError
 VALID_SMOKING_STATUS = ["formerly smoked", "never smoked", "smokes", "Unknown"]
 
 # Define valid categories for other categorical columns
-VALID_GENDER = ["Male", "Female", "Other"]
+# Note: "Other" is removed during data loading due to singleton observation (n=1)
+# that violates chi-square assumptions and creates overfitting risk
+VALID_GENDER = ["Male", "Female"]
 VALID_WORK_TYPE = ["Private", "Self-employed", "Govt_job", "children", "Never_worked"]
 VALID_RESIDENCE_TYPE = ["Urban", "Rural"]
 VALID_EVER_MARRIED = ["Yes", "No"]
@@ -220,6 +222,22 @@ def load_stroke_data(
             f"Row count changed after dropping 'id': "
             f"expected {original_rows}, got {df.shape[0]}"
         )
+    
+    # Sanitization: Merge singleton 'Other' gender category into 'Female'
+    # Justification: Only 1 observation (0.02% of data) - merging preserves data
+    # while avoiding chi-square assumption violations and singleton feature issues
+    if "gender" in df.columns:
+        gender_counts = df["gender"].value_counts()
+        if "Other" in gender_counts.index and gender_counts["Other"] <= 2:
+            other_count = gender_counts["Other"]
+            warnings.warn(
+                f"Merging {other_count} 'Other' gender observation(s) into 'Female' category "
+                f"({other_count/len(df)*100:.4f}% of data). "
+                "Justification: Singleton category violates statistical assumptions "
+                "(chi-square expected frequency < 5). Merging to Female preserves data point.",
+                UserWarning
+            )
+            df.loc[df["gender"] == "Other", "gender"] = "Female"
     
     # Validate against schema if requested
     if validate:
