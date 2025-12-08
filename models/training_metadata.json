@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-12-07T02:12:50.341871",
+  "timestamp": "2025-12-07T19:28:51.008708",
   "config": {
     "data_path": "C:\\Users\\vishu\\sheepy assignment\\ai in health\\the model\\healthcare-dataset-stroke-data.csv",
     "output_dir": "C:\\Users\\vishu\\sheepy assignment\\ai in health\\the model\\models",
@@ -24,11 +24,11 @@
     "model__subsample": 0.8253102287905535
   },
   "metrics": {
-    "roc_auc": 0.8412551440329219,
-    "average_precision": 0.2853839029956679,
+    "roc_auc": 0.8484567901234568,
+    "average_precision": 0.2729947746337375,
     "sensitivity": 0.82,
-    "specificity": 0.7242798353909465,
-    "ppv": 0.13268608414239483,
-    "npv": 0.9873772791023843
+    "specificity": 0.7283950617283951,
+    "ppv": 0.13442622950819672,
+    "npv": 0.9874476987447699
   }
 }

@@ -30,12 +30,22 @@ from sklearn.preprocessing import OneHotEncoder, RobustScaler
 # Feature Definitions
 # =============================================================================
 
-# Numerical features for scaling and imputation
-NUMERICAL_FEATURES = [
+# Base numerical features for scaling and imputation
+BASE_NUMERICAL_FEATURES = [
     'age',
     'avg_glucose_level',
     'bmi'
 ]
+
+# Engineered numerical features (created by AggressiveFeatureEngineer)
+ENGINEERED_NUMERICAL_FEATURES = [
+    'risk_cluster',        # age × glucose × bmi
+    'vascular_stress',     # hypertension + heart_disease  
+    'is_elderly_diabetic'  # (age > 70) & (glucose > 200)
+]
+
+# All numerical features (base + engineered)
+NUMERICAL_FEATURES = BASE_NUMERICAL_FEATURES + ENGINEERED_NUMERICAL_FEATURES
 
 # Categorical features for one-hot encoding
 CATEGORICAL_FEATURES = [
@@ -96,6 +106,64 @@ def split_data(
     print(f"  Test set:     {len(X_test)} samples ({y_test.mean()*100:.2f}% stroke)")
     
     return X_train, X_test, y_train, y_test
+
+
+# =============================================================================
+# Aggressive Feature Engineering
+# =============================================================================
+
+class AggressiveFeatureEngineer(BaseEstimator, TransformerMixin):
+    """
+    Creates interaction features and non-linear flags for aggressive modeling.
+    
+    Features created:
+    1. risk_cluster = age × avg_glucose_level × bmi (Triple Threat)
+    2. vascular_stress = hypertension + heart_disease (Condition Count)
+    3. is_elderly_diabetic = (age > 70) & (avg_glucose_level > 200)
+    
+    Rationale:
+    - Interaction features capture synergistic effects that require multiple
+      splits for tree models to discover
+    - Non-linear flags explicitly encode high-risk combinations
+    - These "manufactured signals" make the decision boundary more obvious
+    """
+    
+    def fit(self, X, y=None):
+        return self
+    
+    def transform(self, X):
+        """
+        Add engineered features to the dataset.
+        Expects DataFrame with: age, avg_glucose_level, bmi, hypertension, heart_disease
+        """
+        X_out = X.copy()
+        
+        # Feature 1: Triple Threat (multiplicative interaction)
+        X_out['risk_cluster'] = (
+            X_out['age'] * 
+            X_out['avg_glucose_level'] * 
+            X_out['bmi'].fillna(X_out['bmi'].median())  # Handle missing BMI
+        )
+        
+        # Feature 2: Vascular Stress (additive - count of conditions)
+        X_out['vascular_stress'] = (
+            X_out['hypertension'].astype(int) + 
+            X_out['heart_disease'].astype(int)
+        )
+        
+        # Feature 3: High-risk flag (non-linear threshold)
+        X_out['is_elderly_diabetic'] = (
+            (X_out['age'] > 70) & 
+            (X_out['avg_glucose_level'] > 200)
+        ).astype(int)
+        
+        return X_out
+    
+    def get_feature_names_out(self, input_features=None):
+        """Return feature names including engineered features."""
+        if input_features is None:
+            return None
+        return list(input_features) + ['risk_cluster', 'vascular_stress', 'is_elderly_diabetic']
 
 
 # =============================================================================
@@ -216,7 +284,7 @@ def create_numerical_pipeline() -> Pipeline:
             ('bmi_missing_indicator', BMIMissingIndicatorImproved()),
             
             # Step 2: Scale features using median/IQR (robust to outliers)
-            # This includes the new bmi_missing column (now 4 numerical features)
+            # Now processes BASE numerical + ENGINEERED numerical (7 total)
             ('scaler', RobustScaler()),
             
             # Step 3: Impute missing BMI values using K-Nearest Neighbors
@@ -387,15 +455,16 @@ def preprocess_data(
     df: pd.DataFrame,
     test_size: float = 0.2,
     random_state: int = 42
-) -> Tuple[np.ndarray, np.ndarray, pd.Series, pd.Series, ColumnTransformer, List[str]]:
+) -> Tuple[np.ndarray, np.ndarray, pd.Series, pd.Series, Pipeline, List[str]]:
     """
     Complete preprocessing pipeline execution.
     
     This function:
     1. Splits data with stratification
-    2. Fits preprocessor on training data only (no leakage)
-    3. Transforms both train and test sets
-    4. Returns transformed arrays and fitted preprocessor
+    2. Applies aggressive feature engineering
+    3. Fits preprocessor on training data only (no leakage)
+    4. Transforms both train and test sets
+    5. Returns transformed arrays and fitted pipeline
     
     Args:
         df: Input DataFrame with all features and target
@@ -416,31 +485,36 @@ def preprocess_data(
         df, test_size=test_size, random_state=random_state
     )
     
-    # Step 2: Create preprocessor
+    # Step 2: Create feature engineering + preprocessing pipeline
+    feature_engineer = AggressiveFeatureEngineer()
     preprocessor = create_preprocessing_pipeline()
     
+    # Combine into full pipeline
+    full_pipeline = Pipeline([
+        ('feature_engineer', feature_engineer),
+        ('preprocessor', preprocessor)
+    ])
+    
     # Step 3: Fit on training data ONLY, then transform
-    # This is where leakage prevention happens - fit() only sees X_train
-    X_train_transformed = preprocessor.fit_transform(X_train)
+    X_train_transformed = full_pipeline.fit_transform(X_train)
     
     # Step 4: Transform test data using statistics from training data
-    # The test data does NOT influence the learned parameters
-    X_test_transformed = preprocessor.transform(X_test)
+    X_test_transformed = full_pipeline.transform(X_test)
     
-    # Step 5: Get feature names for interpretability
-    feature_names = get_feature_names(preprocessor)
+    # Step 5: Get feature names
+    feature_names = get_feature_names(full_pipeline.named_steps['preprocessor'])
     
     print(f"\nPreprocessing complete:")
     print(f"  Original features: {X_train.shape[1]}")
+    print(f"  Engineered features added: 3")
     print(f"  Transformed features: {X_train_transformed.shape[1]}")
-    print(f"  Feature names: {feature_names}")
     
     return (
         X_train_transformed,
         X_test_transformed,
         y_train,
         y_test,
-        preprocessor,
+        full_pipeline,
         feature_names
     )
 

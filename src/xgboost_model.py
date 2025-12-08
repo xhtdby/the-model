@@ -553,7 +553,8 @@ def train_stroke_model(
         split_data,
         create_preprocessing_pipeline,
         get_feature_names,
-        NUMERICAL_FEATURES,
+        AggressiveFeatureEngineer,
+        BASE_NUMERICAL_FEATURES,
         CATEGORICAL_FEATURES
     )
     
@@ -567,33 +568,42 @@ def train_stroke_model(
     print("\n[Step 2] Calculating cost-sensitive weight...")
     scale_pos_weight = calculate_scale_pos_weight(y_train)
     
-    # Step 3: Create and fit preprocessor to get feature names
+    # Step 3: Create preprocessing pipeline with feature engineering
     print("\n[Step 3] Creating preprocessing pipeline...")
+    feature_engineer = AggressiveFeatureEngineer()
     preprocessor = create_preprocessing_pipeline()
     
+    # Apply feature engineering to training data
+    X_train_eng = feature_engineer.fit_transform(X_train)
+    
     # Fit preprocessor to get feature names (needed for monotonic constraints)
-    preprocessor.fit(X_train)
+    preprocessor.fit(X_train_eng)
     feature_names = get_feature_names(preprocessor)
-    print(f"  Total features after preprocessing: {len(feature_names)}")
+    print(f"  Total features after engineering + preprocessing: {len(feature_names)}")
     
     # Step 4: Get monotonic constraints (for final model, not during CV)
     print("\n[Step 4] Defining clinical monotonic constraints...")
     monotonic_constraints = get_monotonic_constraints(feature_names)
     print(f"  Constraints string: {monotonic_constraints[:50]}...")
     
-    # Step 5: Create fresh preprocessor for pipeline (will be re-fit during CV)
+    # Step 5: Create fresh pipeline (feature engineering + preprocessing + model)
+    fresh_feature_engineer = AggressiveFeatureEngineer()
     preprocessor_for_pipeline = create_preprocessing_pipeline()
     
-    # Step 6: Create full pipeline WITHOUT monotonic constraints for tuning
-    # (Constraints cause issues with varying feature counts during CV)
+    # Step 6: Create full pipeline WITH feature engineering
     print("\n[Step 5] Creating pipeline for hyperparameter tuning...")
     print("  Note: Monotonic constraints applied after tuning to avoid CV issues")
-    pipeline = create_full_pipeline(
-        preprocessor=preprocessor_for_pipeline,
-        scale_pos_weight=scale_pos_weight,
-        monotonic_constraints=None,  # Will apply after tuning
-        random_state=random_state
-    )
+    
+    # Build manual pipeline to include feature engineering
+    pipeline = Pipeline([
+        ('feature_engineer', fresh_feature_engineer),
+        ('preprocessor', preprocessor_for_pipeline),
+        ('model', create_xgboost_model(
+            scale_pos_weight=scale_pos_weight,
+            monotonic_constraints=None,
+            random_state=random_state
+        ))
+    ])
     
     # Step 7: Hyperparameter tuning
     print("\n[Step 6] Tuning hyperparameters...")
@@ -610,7 +620,8 @@ def train_stroke_model(
     # Step 8: Create final model with best parameters AND monotonic constraints
     print("\n[Step 7] Creating final model with monotonic constraints...")
     
-    # Create final preprocessor and fit it
+    # Create final feature engineer and preprocessor
+    final_feature_engineer = AggressiveFeatureEngineer()
     final_preprocessor = create_preprocessing_pipeline()
     
     # Extract best model parameters (remove 'model__' prefix)
@@ -627,22 +638,23 @@ def train_stroke_model(
         **best_model_params
     )
     
-    # Create final pipeline
-    best_model = Pipeline([
+    # Create final pipeline with feature engineering
+    final_pipeline = Pipeline([
+        ('feature_engineer', final_feature_engineer),
         ('preprocessor', final_preprocessor),
         ('model', final_xgb)
     ])
     
     # Fit final model on full training data
-    best_model.fit(X_train, y_train)
+    final_pipeline.fit(X_train, y_train)
     
     # Step 9: Evaluate on test set
     print("\n[Step 8] Evaluating on test set...")
-    evaluation_results = evaluate_model(best_model, X_test, y_test)
+    evaluation_results = evaluate_model(final_pipeline, X_test, y_test)
     
     # Step 10: Feature importance
     print("\n[Step 9] Analyzing feature importance...")
-    importance_df = get_feature_importance(best_model, feature_names)
+    importance_df = get_feature_importance(final_pipeline, feature_names)
     evaluation_results['feature_importance'] = importance_df
     
     print("\n" + "=" * 70)
@@ -651,7 +663,7 @@ def train_stroke_model(
     print(f"Best CV ROC-AUC: {random_search.best_score_:.4f}")
     print(f"Test ROC-AUC:    {evaluation_results['roc_auc']:.4f}")
     
-    return best_model, best_params, evaluation_results
+    return final_pipeline, best_params, evaluation_results
 
 
 # =============================================================================
